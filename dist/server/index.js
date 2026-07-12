@@ -1,17 +1,25 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(__dirname, "..");
-const indexPath = path.join(root, "index.html");
 const port = Number(process.env.PORT || 3000);
+
+const indexPath = [
+  path.join(process.cwd(), "dist", "index.html"),
+  path.join(process.cwd(), "index.html"),
+  path.join(process.cwd(), "..", "index.html")
+].find((candidate) => fs.existsSync(candidate));
 
 const server = http.createServer((request, response) => {
   if (request.url === "/healthz") {
     response.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
     response.end("ok");
+    return;
+  }
+
+  if (!indexPath) {
+    response.writeHead(500, { "content-type": "text/plain; charset=utf-8" });
+    response.end("Unable to locate index.html");
     return;
   }
 
