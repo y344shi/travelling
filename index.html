@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ottawa → Sutton → Montréal · July 12, 2026</title>
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{
+  --bg:#07110e;--panel:#0d1a16;--panel2:#12231d;--line:#284138;
+  --text:#edf7f1;--muted:#a8bdb2;--sage:#98d4b2;--gold:#f3ce78;
+  --coral:#ff9a7d;--blue:#8ec7ff;--danger:#ff827f;--shadow:0 20px 50px #0007;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,a{font:inherit}
+a{color:inherit}
+.hero{padding:22px clamp(16px,4vw,52px) 18px;background:
+ radial-gradient(circle at 15% 10%,#23594699,transparent 34%),
+ radial-gradient(circle at 85% 0%,#6a4b2188,transparent 32%),
+ linear-gradient(140deg,#07110e,#0b1713 55%,#11120b);border-bottom:1px solid var(--line)}
+.kicker{color:var(--gold);font-weight:750;letter-spacing:.08em;text-transform:uppercase;font-size:12px}
+h1{font-size:clamp(28px,5vw,56px);line-height:1.02;margin:8px 0 10px;max-width:1000px}
+.lead{max-width:1000px;color:#d6e6dd;font-size:clamp(15px,2vw,19px)}
+.alerts{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.pill{background:#ffffff10;border:1px solid #ffffff22;border-radius:999px;padding:8px 12px;color:#e9f5ee}
+.pill strong{color:var(--gold)}
+.app{display:grid;grid-template-columns:minmax(360px,43%) 1fr;height:calc(100vh - 220px);min-height:660px}
+.sidebar{overflow:auto;border-right:1px solid var(--line);background:var(--panel)}
+.mapwrap{position:relative;min-height:500px}
+#map{height:100%;width:100%;background:#17211d}
+.controls{position:sticky;top:0;z-index:10;padding:14px;background:#0d1a16ee;backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+.routebuttons,.filters{display:flex;gap:8px;overflow:auto;padding-bottom:4px}
+.routebuttons button,.filters button,.gps{
+ border:1px solid var(--line);background:#13261f;color:var(--text);border-radius:12px;padding:9px 11px;white-space:nowrap;cursor:pointer
+}
+.routebuttons button.active,.filters button.active{background:var(--sage);color:#082016;border-color:transparent;font-weight:800}
+.gps{width:100%;margin-top:10px;background:#1e342b}
+.gps.good{background:#173d2e;border-color:#4d9f79}
+.timeline{padding:14px}
+.routehead{margin:0 0 10px}
+.routehead h2{font-size:19px;margin:0}
+.routehead p{margin:2px 0 0;color:var(--muted)}
+.timeitem{display:grid;grid-template-columns:84px 1fr;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.time{color:var(--gold);font-weight:800}
+.timeitem b{display:block}
+.timeitem span{color:var(--muted)}
+.sectiontitle{display:flex;justify-content:space-between;align-items:end;padding:8px 14px}
+.sectiontitle h2{margin:0;font-size:20px}
+.sectiontitle small{color:var(--muted)}
+.cards{padding:0 12px 50px;display:grid;gap:10px}
+.card{border:1px solid var(--line);background:linear-gradient(145deg,#102019,#0c1713);border-radius:16px;padding:13px;box-shadow:0 8px 28px #0003}
+.card.hidden{display:none}
+.cardtop{display:flex;justify-content:space-between;gap:10px}
+.card h3{margin:0 0 3px;font-size:17px}
+.area{color:var(--sage);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.dist{font-weight:800;color:var(--gold);white-space:nowrap}
+.meta{display:grid;grid-template-columns:1fr;gap:5px;margin:10px 0;color:#c8d9d0}
+.meta strong{color:#fff}
+.summary{margin:8px 0}
+.why{color:var(--muted);margin:7px 0 11px}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.tag{font-size:11px;border-radius:999px;padding:4px 7px;background:#ffffff0c;border:1px solid #ffffff18;color:#bdd2c7}
+.tag.recommended{background:#173d2e;color:#c9ffe2}
+.actions{display:flex;gap:7px;flex-wrap:wrap}
+.actions a,.actions button{border:1px solid var(--line);background:#172a23;color:#fff;text-decoration:none;border-radius:10px;padding:8px 9px;cursor:pointer}
+.actions a.primary{background:var(--sage);color:#082016;font-weight:800;border-color:transparent}
+.maplegend{position:absolute;z-index:500;right:12px;top:12px;background:#0b1713e8;border:1px solid var(--line);border-radius:12px;padding:9px 11px;box-shadow:var(--shadow);font-size:12px}
+.maplegend div{margin:3px 0}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.route-note{position:absolute;z-index:500;left:12px;bottom:12px;right:12px;background:#0b1713e8;border:1px solid var(--line);border-radius:12px;padding:9px 11px;color:#d7e5dd;box-shadow:var(--shadow)}
+.notice{margin:10px 14px;border:1px solid #6d5830;background:#2b2414;border-radius:12px;padding:10px;color:#f6deb0}
+.sources{padding:18px 14px 60px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
+.sources a{color:#cee8db}
+@media(max-width:900px){
+ .hero{padding-bottom:14px}
+ .app{display:flex;flex-direction:column;height:auto}
+ .sidebar{order:2;border-right:0;overflow:visible}
+ .mapwrap{order:1;height:58vh;min-height:430px;position:sticky;top:0;z-index:20;border-bottom:1px solid var(--line)}
+ .controls{top:58vh}
+}
+@media(max-width:520px){
+ .app{grid-template-columns:1fr}
+ .timeitem{grid-template-columns:74px 1fr}
+ .maplegend{display:none}
+ .route-note{font-size:12px}
+}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="kicker">Today · Sunday, July 12, 2026</div>
+  <h1>Ottawa → Sutton → Montréal fireworks</h1>
+  <div class="lead">A realistic, multi-route day planner built around a 9:50 a.m. departure, one Sutton-area highlight, an early dinner, and Italy’s 10 p.m. fireworks over Montréal.</div>
+  <div class="alerts">
+    <div class="pill"><strong>Weather:</strong> Sutton 26°C; Montréal 28°C, mostly sunny</div>
+    <div class="pill"><strong>Fireworks:</strong> 10:00–10:30 p.m., rain or shine</div>
+    <div class="pill"><strong>Closure:</strong> Jacques-Cartier Bridge closes to traffic at 8 p.m.</div>
+    <div class="pill"><strong>Crowd:</strong> Caribbean festival at Old Port until 11 p.m.</div>
+  </div>
+</header>
+
+<main class="app">
+<section class="sidebar">
+  <div class="controls">
+    <div class="routebuttons" id="routeButtons"></div>
+    <button class="gps" id="gpsBtn">◎ Use my live location and rank places by distance</button>
+    <div class="filters" id="filters" style="margin-top:9px"></div>
+  </div>
+  <div class="notice"><strong>Important:</strong> the five Xiaohongshu pages could not be independently opened in a web browser. Their titles were used only to identify places; hours and logistics below were checked against official or public travel sources. No Xiaohongshu review text has been invented.</div>
+  <div class="timeline" id="timeline"></div>
+  <div class="sectiontitle"><h2>Nearby places</h2><small id="sortLabel">Route order</small></div>
+  <div class="cards" id="cards"></div>
+  <div class="sources">
+    <strong>Research anchors:</strong> official Old Port fireworks page, La Ronde programming, Mont SUTTON, Parc Sutton, Château Ste-Agnès, Parks Canada, REM, Palais des congrès, restaurant official sites and public review directories. Hours can change during private events or same-day operations; call before making a long detour.
+  </div>
+</section>
+
+<section class="mapwrap">
+  <div id="map"></div>
+  <div class="maplegend">
+    <div><span class="dot" style="background:#98d4b2"></span>Food / coffee</div>
+    <div><span class="dot" style="background:#f3ce78"></span>Attraction</div>
+    <div><span class="dot" style="background:#ff9a7d"></span>Event</div>
+    <div><span class="dot" style="background:#8ec7ff"></span>Transport</div>
+  </div>
+  <div class="route-note">Map lines are planning guides, not turn-by-turn routing. Use the Apple Maps or Google Maps buttons for live traffic and navigation.</div>
+</section>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const PLACES = [{"id": "ottawa", "name": "Ottawa departure", "category": "route", "area": "Ottawa", "lat": 45.4215, "lng": -75.6972, "hours": "Depart 9:50 a.m.", "rating": "Starting point", "priority": 100, "summary": "Start with a full tank. The app can replace this point with your live GPS position.", "why": "Keeps the day realistic: Sutton is roughly a full cross-region drive before the Montréal evening.", "address": "Ottawa, ON", "phone": "", "official": "", "tags": ["start", "route"], "route": ["A", "B", "C"]}, {"id": "cafe-campagne", "name": "Café Campagne", "category": "coffee", "area": "Vaudreuil–Hudson corridor", "lat": 45.4505, "lng": -74.1415, "hours": "Sunday 7:00 a.m.–3:00 p.m.", "rating": "4.4/5 Tripadvisor signal · 191 reviews", "priority": 95, "summary": "Country-style breakfast and brunch, directly useful as the first substantial stop from Ottawa.", "why": "Best balance of quality, parking, early hours and route efficiency. Keep the stop to 40–45 minutes.", "address": "3673 Route Harwood, Vaudreuil-Dorion, QC J7V 0K1", "phone": "+14504588204", "official": "https://www.cafecampagne.ca/", "tags": ["breakfast", "brunch", "coffee", "recommended"], "route": ["A", "B", "C"]}, {"id": "norah", "name": "Norah Café de l’Anse", "category": "coffee", "area": "Vaudreuil", "lat": 45.3947, "lng": -74.0278, "hours": "Check same-day hours before leaving the highway", "rating": "Strong local-tourism recommendation", "priority": 72, "summary": "Organic/fair-trade coffee, pastries, soups, sandwiches and salads in a historic waterfront house.", "why": "Choose this over Café Campagne only when atmosphere and a bay view matter more than schedule certainty.", "address": "Vaudreuil Bay, Vaudreuil-Dorion, QC", "phone": "", "official": "https://lecafenorah.com/index.html", "tags": ["coffee", "waterfront", "backup"], "route": ["B", "C"]}, {"id": "sutton-village", "name": "Sutton Village Centre", "category": "attraction", "area": "Sutton", "lat": 45.106, "lng": -72.6163, "hours": "Public streets; tourism office summer Sunday roughly 10:00 a.m.–5:00 p.m.", "rating": "Core destination", "priority": 100, "summary": "Compact mountain village with cafés, galleries, local food shops and an easy walk along Rue Principale.", "why": "Use it as the anchor point. Most food options are within a few minutes on foot.", "address": "27 Rue Principale N, Sutton, QC J0E 2K0", "phone": "+14505388455", "official": "https://tourismesutton.ca/en/", "tags": ["village", "walk", "shopping", "recommended"], "route": ["A", "B", "C"]}, {"id": "rumeur", "name": "La Rumeur Affamée", "category": "food", "area": "Sutton Village", "lat": 45.1061, "lng": -72.6161, "hours": "Sunday 9:00 a.m.–5:00 p.m.", "rating": "4.5/5 Tripadvisor signal · 81 reviews", "priority": 90, "summary": "Fine grocery and bakery counter in a historic general-store building.", "why": "Ideal fast lunch: buy bread, cheese, charcuterie or pastries and avoid losing an hour to table service.", "address": "15 Rue Principale N, Sutton, QC J0E 2K0", "phone": "+14505381888", "official": "https://www.rumeursutton.com/", "tags": ["lunch", "bakery", "takeout", "recommended"], "route": ["A", "B", "C"]}, {"id": "pixel", "name": "Pixel Nano Resto", "category": "coffee", "area": "Sutton Village", "lat": 45.1064, "lng": -72.6165, "hours": "Sunday 9:00 a.m.–3:00 p.m.", "rating": "4.8 Google signal reported by Restaurant Guru", "priority": 86, "summary": "Specialty coffee and creative brunch in a tiny, contemporary village restaurant.", "why": "The strongest coffee-first Sutton option, but your arrival may be close to last service.", "address": "22 Rue Principale N #1, Sutton, QC J0E 2K0", "phone": "+15795345991", "official": "https://www.instagram.com/pixel.nanoresto/", "tags": ["coffee", "brunch", "small", "reservation"], "route": ["B", "C"]}, {"id": "monte-verde", "name": "Monté Verdé at Le Pleasant", "category": "food", "area": "Sutton Village", "lat": 45.1054, "lng": -72.6152, "hours": "Sunday breakfast 8:00–11:00; lunch 11:30 a.m.–3:00 p.m.", "rating": "Polished hotel dining", "priority": 78, "summary": "Refined breakfast/lunch and cocktails in a boutique hotel setting.", "why": "Use as a weather-proof, calmer lunch backup. Arrival before 2:30 p.m. is safer.", "address": "1 Rue Pleasant, Sutton, QC J0E 2K0", "phone": "+14505386181", "official": "https://www.lepleasant.com/en-ca/monte-verde-restaurant", "tags": ["breakfast", "lunch", "indoor", "reservation"], "route": ["B"]}, {"id": "mont-sutton", "name": "Mont SUTTON Chairlift", "category": "attraction", "area": "Sutton Mountain", "lat": 45.1041, "lng": -72.5607, "hours": "Daily 10:30 a.m.–5:00 p.m. in this summer period", "rating": "Top same-day scenic choice", "priority": 98, "summary": "Ride to approximately 680 m for wide Eastern Townships views; food and drinks are available at Cube-IK.", "why": "Highest scenery-to-time ratio. Arrive around 2:30 p.m. and leave by 4:20 p.m.", "address": "671 Rue Maple, Sutton, QC J0E 2K0", "phone": "+14505382545", "official": "https://montsutton.com/en/activity/chairlift-ride/", "tags": ["view", "chairlift", "mountain", "ticket", "recommended"], "route": ["A"]}, {"id": "pens", "name": "Parc d’environnement naturel de Sutton (PENS)", "category": "attraction", "area": "Sutton Mountain", "lat": 45.1128, "lng": -72.552, "hours": "Trail entry permitted 8:30 a.m.–5:00 p.m.", "rating": "4.7/5 Tripadvisor signal · 55 reviews", "priority": 75, "summary": "Four peaks, headwater lakes and roughly 52 km of trails.", "why": "Excellent on a dedicated hiking day, but today only a short trail is realistic. Do not start a long loop after 3 p.m.", "address": "800 Chemin Réal, Sutton, QC J0E 2K0", "phone": "+14505384085", "official": "https://www.parcsutton.com/en/tickets/book-your-daily-access", "tags": ["hiking", "ticket", "nature", "time-sensitive"], "route": ["B"]}, {"id": "chateau", "name": "Château Ste-Agnès", "category": "attraction", "area": "South Sutton", "lat": 45.0415, "lng": -72.604, "hours": "Sunday 10:00 a.m.–5:00 p.m.; booking recommended", "rating": "Highly photogenic · visitor value reviews are mixed", "priority": 88, "summary": "European-style vineyard estate, terraced vines, château and chapel in a mountain setting.", "why": "Best low-exertion visual option. The scenery is the draw; recent public reviews are more mixed on price/value.", "address": "2559 Chemin Scenic, Sutton, QC J0E 2K0", "phone": "", "official": "https://chateausteagnes.com/shop/experiences/", "tags": ["winery", "photos", "reservation", "xhs-shared"], "route": ["B"]}, {"id": "brouerie", "name": "Auberge Sutton Brouërie", "category": "food", "area": "Sutton Village", "lat": 45.1047, "lng": -72.6152, "hours": "Sunday 8:00 a.m.–8:00 p.m.; Sunday jazz 5:00–7:00 p.m.", "rating": "Popular local brewery/restaurant", "priority": 96, "summary": "House beer, cider, kombucha and seasonal pub cooking beside a small river.", "why": "Best early-dinner fit. Reserve 4:30–4:45 p.m., hear the start of Sunday jazz, and leave by 6:00 p.m.", "address": "27 Rue Principale S, Sutton, QC J0E 2K0", "phone": "+14505380002", "official": "https://aubergesuttonbrouerie.com/en/menus-brouerie/", "tags": ["dinner", "beer", "jazz", "reservation", "recommended"], "route": ["A", "B"]}, {"id": "tartinizza", "name": "Tartinizza", "category": "food", "area": "Sutton Village", "lat": 45.107, "lng": -72.6172, "hours": "Sunday reported 11:00 a.m.–9:00 p.m.", "rating": "Traveller’s Choice signal", "priority": 85, "summary": "Thin-crust pizza, changing chalkboard dishes and house desserts in a casual room.", "why": "Reliable group-friendly alternative when Brouërie has no table.", "address": "51 Rue Principale N, Sutton, QC J0E 2K0", "phone": "+14505385067", "official": "https://www.instagram.com/tartinizza/", "tags": ["pizza", "dinner", "group", "reservation"], "route": ["A", "B", "C"]}, {"id": "abordage", "name": "Brasserie À L’Abordage", "category": "food", "area": "Sutton Village", "lat": 45.1044, "lng": -72.6156, "hours": "Open year-round; call to confirm today’s kitchen hours", "rating": "4.2/5 Tripadvisor signal · 252 reviews", "priority": 82, "summary": "Locally brewed beer with burgers, fish and chips, wraps, salads and duck poutine.", "why": "Best casual backup for a mixed group; terrace permits leashed dogs.", "address": "10 Rue Principale S, Sutton, QC J0E 2K0", "phone": "+14505388338", "official": "https://alabordage.beer/", "tags": ["beer", "burger", "casual", "backup"], "route": ["C"]}, {"id": "chambly-fort", "name": "Fort Chambly National Historic Site", "category": "attraction", "area": "Chambly", "lat": 45.4488, "lng": -73.2804, "hours": "Daily 10:00 a.m.–5:00 p.m.; last admission 4:30 p.m.", "rating": "Strong heritage stop", "priority": 73, "summary": "Restored riverside fort and museum beside large lawns and the Richelieu River.", "why": "Excellent destination, but too late for the interior on today’s Sutton-first schedule.", "address": "2 Rue de Richelieu, Chambly, QC J3L 2B9", "phone": "+14506581585", "official": "https://parks.canada.ca/lhn-nhs/qc/fortchambly", "tags": ["history", "park", "xhs-shared", "closed-by-arrival"], "route": ["C"]}, {"id": "chambly-canal", "name": "Chambly Canal & Basin Walk", "category": "attraction", "area": "Chambly", "lat": 45.4502, "lng": -73.2816, "hours": "Site open sunrise–11:00 p.m.", "rating": "Excellent golden-hour detour", "priority": 84, "summary": "Waterside path, locks, boats, lawns and fort views around the Chambly Basin.", "why": "This is the part of Chambly that still works after 5 p.m. Keep it to 45–60 minutes.", "address": "Chambly Canal National Historic Site, Chambly, QC", "phone": "", "official": "https://parks.canada.ca/lhn-nhs/qc/chambly/visit/heures-hours", "tags": ["waterfront", "walk", "sunset", "xhs-shared"], "route": ["C"]}, {"id": "le-canal", "name": "Restaurant Le Canal", "category": "food", "area": "Pierrefonds / West Island", "lat": 45.4728, "lng": -73.864, "hours": "Sunday 11:00 a.m.–8:00 p.m.; closed Monday", "rating": "4.8/5 aggregate signal · about 2,000 reviews", "priority": 60, "summary": "Choose seafood from the display, then have it grilled, fried, baked or sautéed with Mediterranean/Egyptian flavours.", "why": "The Xiaohongshu title is directionally accurate, but it is in Pierrefonds—not the Old Port or Sutton corridor. Visiting today adds a major west-island detour.", "address": "4945 Boulevard Saint-Jean, Pierrefonds, QC H9H 2A9", "phone": "+15146265757", "official": "https://www.restaurantlecanal.ca/", "tags": ["seafood", "xhs-shared", "off-route", "reservation"], "route": []}, {"id": "mont-pinacle", "name": "Mont Pinacle / Parc Harold F. Baldwin", "category": "attraction", "area": "Coaticook region", "lat": 45.054, "lng": -71.99, "hours": "Reservation required; verify entry slot before driving", "rating": "Spectacular lake-and-cliff viewpoint", "priority": 58, "summary": "About 7 km round trip with a summit view over Lac Lyster; online reservation is required.", "why": "The Xiaohongshu comparison explains the appeal, but this is far east of Sutton. It does not fit a 10 p.m. Montréal fireworks day.", "address": "1891 Chemin May, Baldwin Mills / Coaticook, QC J1A 2S4", "phone": "", "official": "https://parchfbaldwin.com/reservations-and-fees", "tags": ["hike", "view", "reservation", "xhs-shared", "not-today"], "route": []}, {"id": "brossard-rem", "name": "Brossard REM Park-and-Ride", "category": "transport", "area": "Brossard", "lat": 45.4307, "lng": -73.4381, "hours": "REM Sunday service runs past midnight; check service status", "rating": "Lowest-stress Montréal entry", "priority": 99, "summary": "Large park-and-ride with 2,841 spaces, including 1,998 free spaces and paid spaces.", "why": "Coming from Sutton, park here before downtown congestion. REM to Gare Centrale, then walk or take transit.", "address": "8200 Boulevard de Rome, Brossard, QC", "phone": "", "official": "https://rem.info/en/travelling/stations/brossard/by-car", "tags": ["parking", "transit", "recommended"], "route": ["A", "B", "C"]}, {"id": "palais-parking", "name": "Palais des congrès Indoor Parking", "category": "transport", "area": "Old Montréal edge", "lat": 45.5041, "lng": -73.5612, "hours": "Indoor parking; event-day availability not guaranteed", "rating": "Best direct-drive backup", "priority": 80, "summary": "400 indoor spaces; official rate is $25 for 2–12 hours.", "why": "Approach from the west via the Samuel-De Champlain Bridge. Do not route toward the Jacques-Cartier Bridge.", "address": "1025 Rue Chenneville, Montréal, QC H2Z 1V8", "phone": "+15148713123", "official": "https://congresmtl.com/en/visitors/directions/", "tags": ["parking", "downtown", "backup"], "route": ["A", "B", "C"]}, {"id": "caribbean", "name": "Taste of the Caribbean Festival", "category": "event", "area": "Old Port", "lat": 45.5092, "lng": -73.549, "hours": "Today 12:00–11:00 p.m.; free entry", "rating": "Large live festival", "priority": 95, "summary": "Food stalls, live Caribbean music, dance, arts and family programming at Clock Tower Pier.", "why": "Use it for your late snack and pre-fireworks atmosphere. Expect heavy crowds.", "address": "Clock Tower Pier, Old Port of Montréal", "phone": "", "official": "https://totc.ca/", "tags": ["food", "music", "festival", "free", "recommended"], "route": ["A", "B", "C"]}, {"id": "clock-beach", "name": "Clock Tower Beach Fireworks Night", "category": "event", "area": "Old Port", "lat": 45.5104, "lng": -73.5482, "hours": "Fireworks 10:00–10:30 p.m.; beach closes 11:00 p.m.", "rating": "Ticketed, direct river view", "priority": 100, "summary": "Official beach viewing with a clear view toward the launch area and Jacques-Cartier Bridge.", "why": "Most predictable Old Port sightline. Official listed rate: $15.43 tax included; buy immediately if inventory remains.", "address": "Clock Tower Beach, Montréal, QC", "phone": "", "official": "https://www.oldportofmontreal.com/event/fireworks-mazorca-beach-old-port-montreal", "tags": ["fireworks", "ticket", "recommended"], "route": ["A", "B", "C"]}, {"id": "grand-quay", "name": "Grand Quay / Old Port Free Viewing Area", "category": "event", "area": "Old Port", "lat": 45.5021, "lng": -73.5529, "hours": "Arrive by 8:30–9:00 p.m. for positioning", "rating": "Free viewing option", "priority": 92, "summary": "Wide riverfront promenades and a classic view toward the bridge and launch area.", "why": "Free, central and close to Old Montréal, but sightlines and crowd density vary.", "address": "200 Rue de la Commune O, Montréal, QC", "phone": "", "official": "https://www.port-montreal.com/en/the-port-of-montreal/news/events/feux-2026-en", "tags": ["fireworks", "free", "crowded"], "route": ["A", "B", "C"]}];
+const ROUTES = {"A": {"name": "A · Recommended: brunch + chairlift + jazz dinner + REM", "subtitle": "Best scenery-to-time ratio", "timeline": [["09:50", "Leave Ottawa", "Do not add an Ottawa café stop; the day is already long."], ["11:25–12:10", "Café Campagne", "Breakfast/brunch and coffee. Order quickly."], ["14:00", "Arrive Sutton Village", "10–15 minute orientation walk; buy a light lunch at La Rumeur if needed."], ["14:30–16:20", "Mont SUTTON chairlift", "Ride, viewpoint, brief walk. Last operations end at 5 p.m."], ["16:35–17:50", "Auberge Sutton Brouërie", "Early dinner; Sunday jazz begins at 5 p.m."], ["18:00", "Leave Sutton", "Hard deadline. Use A10 toward Brossard; avoid Jacques-Cartier Bridge."], ["19:15–19:35", "Park at Brossard REM", "Take REM toward Gare Centrale."], ["20:10–21:15", "Old Port + Caribbean festival", "Eat a small second meal and choose your viewing area."], ["21:15", "Hold your fireworks position", "Clock Tower Beach ticketed; Grand Quay is free."], ["22:00–22:30", "Italy fireworks", "Show runs rain or shine."], ["23:00+", "Return to Brossard", "Expect crowd-controlled transit and a late Ottawa arrival."]], "ids": ["ottawa", "cafe-campagne", "sutton-village", "rumeur", "mont-sutton", "brouerie", "brossard-rem", "caribbean", "clock-beach", "grand-quay"]}, "B": {"name": "B · Relaxed: vineyard + village food + REM", "subtitle": "Less physical, more photos and food", "timeline": [["09:50", "Leave Ottawa", "Use Café Campagne or Norah, not both."], ["11:25–12:10", "Brunch stop", "Café Campagne is the schedule-safe choice."], ["14:00–15:30", "Château Ste-Agnès", "Only with an available same-day booking; otherwise switch to village + short PENS walk."], ["15:45–16:25", "Sutton Village", "Pixel may close at 3; use La Rumeur or village shops."], ["16:30–17:45", "Early dinner", "Brouërie first choice; Tartinizza backup."], ["18:00", "Leave Sutton", "Same hard deadline as Route A."], ["19:15 onward", "Brossard REM → Old Port", "Festival, viewing position, 10 p.m. fireworks."]], "ids": ["ottawa", "cafe-campagne", "norah", "chateau", "sutton-village", "rumeur", "monte-verde", "pens", "brouerie", "tartinizza", "brossard-rem", "caribbean", "clock-beach", "grand-quay"]}, "C": {"name": "C · Village + Chambly golden hour + festival dinner", "subtitle": "Adds water and heritage scenery; skips the mountain", "timeline": [["09:50", "Leave Ottawa", "Quick brunch en route."], ["11:25–12:05", "Café Campagne", "Short stop."], ["14:00–16:00", "Sutton Village", "Coffee, shops, lunch; no mountain or winery."], ["16:00", "Leave Sutton for Chambly", "Fort interior will likely be closed by arrival."], ["17:10–18:05", "Chambly Canal and basin", "Walk the waterfront and photograph the fort exterior."], ["18:30", "Brossard REM", "Park and move into Montréal before the 8 p.m. bridge closure."], ["19:20–21:15", "Taste of the Caribbean", "Make this your dinner."], ["22:00–22:30", "Italy fireworks", "Return by REM afterward."]], "ids": ["ottawa", "cafe-campagne", "sutton-village", "rumeur", "pixel", "tartinizza", "abordage", "chambly-fort", "chambly-canal", "brossard-rem", "caribbean", "clock-beach", "grand-quay"]}};
+let activeRoute = "A";
+let activeFilter = "all";
+let userPos = null;
+let markers = {};
+let routeLine = null;
+
+const map = L.map('map',{zoomControl:true}).setView([45.29,-73.45],8);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  maxZoom:19, attribution:'&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+const colors={food:'#98d4b2',coffee:'#98d4b2',attraction:'#f3ce78',event:'#ff9a7d',transport:'#8ec7ff',route:'#d8e7df'};
+function iconFor(p){
+ const color=colors[p.category]||colors.route;
+ return L.divIcon({className:'',html:`<div style="width:17px;height:17px;background:${color};border:3px solid #07110e;border-radius:50%;box-shadow:0 2px 10px #0009"></div>`,iconSize:[17,17],iconAnchor:[8,8]});
+}
+PLACES.forEach(p=>{
+  const m=L.marker([p.lat,p.lng],{icon:iconFor(p)}).addTo(map);
+  m.bindPopup(`<b>${p.name}</b><br>${p.hours}<br><small>${p.address}</small>`);
+  markers[p.id]=m;
+});
+
+function hav(a,b){
+ const R=6371, dLat=(b.lat-a.lat)*Math.PI/180, dLon=(b.lng-a.lng)*Math.PI/180;
+ const s=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+ return 2*R*Math.asin(Math.sqrt(s));
+}
+function mapsLinks(p){
+ const q=encodeURIComponent(`${p.name}, ${p.address}`);
+ return {
+  apple:`https://maps.apple.com/?q=${q}`,
+  google:`https://www.google.com/maps/search/?api=1&query=${q}`
+ };
+}
+function renderRouteButtons(){
+ const el=document.getElementById('routeButtons'); el.innerHTML='';
+ Object.entries(ROUTES).forEach(([k,r])=>{
+   const b=document.createElement('button'); b.textContent=r.name.split(' · ')[0];
+   b.className=k===activeRoute?'active':'';
+   b.onclick=()=>{activeRoute=k;renderAll();};
+   el.appendChild(b);
+ });
+}
+function renderFilters(){
+ const cats=[['all','All'],['coffee','Coffee'],['food','Food'],['attraction','Attractions'],['event','Fireworks'],['transport','Parking / transit']];
+ const el=document.getElementById('filters');el.innerHTML='';
+ cats.forEach(([k,label])=>{
+  const b=document.createElement('button');b.textContent=label;b.className=k===activeFilter?'active':'';
+  b.onclick=()=>{activeFilter=k;renderFilters();renderCards();};
+  el.appendChild(b);
+ });
+}
+function renderTimeline(){
+ const r=ROUTES[activeRoute];
+ document.getElementById('timeline').innerHTML=`<div class="routehead"><h2>${r.name}</h2><p>${r.subtitle}</p></div>`+
+ r.timeline.map(x=>`<div class="timeitem"><div class="time">${x[0]}</div><div><b>${x[1]}</b><span>${x[2]}</span></div></div>`).join('');
+}
+function relevantPlaces(){
+ const routeIds=ROUTES[activeRoute].ids;
+ let arr=PLACES.filter(p=>routeIds.includes(p.id) || p.tags.includes('xhs-shared'));
+ if(activeFilter!=='all') arr=arr.filter(p=>p.category===activeFilter || (activeFilter==='food'&&p.category==='coffee'));
+ if(userPos) arr.sort((a,b)=>hav(userPos,a)-hav(userPos,b));
+ else arr.sort((a,b)=>{
+   const ai=routeIds.indexOf(a.id), bi=routeIds.indexOf(b.id);
+   const av=ai<0?999:ai,bv=bi<0?999:bi;
+   return av-bv || b.priority-a.priority;
+ });
+ return arr;
+}
+function renderCards(){
+ const el=document.getElementById('cards'); el.innerHTML='';
+ document.getElementById('sortLabel').textContent=userPos?'Nearest first':'Route order';
+ relevantPlaces().forEach(p=>{
+  const d=userPos?`${hav(userPos,p).toFixed(hav(userPos,p)<10?1:0)} km`:(p.route.includes(activeRoute)?'On route':'Extra');
+  const links=mapsLinks(p);
+  const card=document.createElement('article');card.className='card';
+  card.innerHTML=`
+   <div class="cardtop"><div><div class="area">${p.area}</div><h3>${p.name}</h3></div><div class="dist">${d}</div></div>
+   <div class="meta"><div><strong>Hours:</strong> ${p.hours}</div><div><strong>Review signal:</strong> ${p.rating}</div></div>
+   <div class="summary">${p.summary}</div>
+   <div class="why"><strong>Why here:</strong> ${p.why}</div>
+   <div class="tags">${p.tags.map(t=>`<span class="tag ${t==='recommended'?'recommended':''}">${t}</span>`).join('')}</div>
+   <div class="actions">
+     <a class="primary" href="${links.apple}" target="_blank" rel="noopener">Apple Maps</a>
+     <a href="${links.google}" target="_blank" rel="noopener">Google Maps</a>
+     ${p.official?`<a href="${p.official}" target="_blank" rel="noopener">Official / reserve</a>`:''}
+     ${p.phone?`<a href="tel:${p.phone}">Call</a>`:''}
+     <button data-id="${p.id}">Show on map</button>
+   </div>`;
+  card.querySelector('button').onclick=()=>{map.setView([p.lat,p.lng],14);markers[p.id].openPopup();};
+  el.appendChild(card);
+ });
+}
+function drawRoute(){
+ if(routeLine) map.removeLayer(routeLine);
+ const ids=ROUTES[activeRoute].ids;
+ const pts=ids.map(id=>PLACES.find(p=>p.id===id)).filter(Boolean).map(p=>[p.lat,p.lng]);
+ routeLine=L.polyline(pts,{color:activeRoute==='A'?'#98d4b2':activeRoute==='B'?'#f3ce78':'#8ec7ff',weight:4,opacity:.78,dashArray:'7 7'}).addTo(map);
+ map.fitBounds(routeLine.getBounds(),{padding:[30,30]});
+ Object.entries(markers).forEach(([id,m])=>{
+   if(ids.includes(id) || PLACES.find(p=>p.id===id).tags.includes('xhs-shared')) m.addTo(map);
+   else map.removeLayer(m);
+ });
+}
+function renderAll(){renderRouteButtons();renderFilters();renderTimeline();renderCards();drawRoute();}
+document.getElementById('gpsBtn').onclick=()=>{
+ const b=document.getElementById('gpsBtn');
+ if(!navigator.geolocation){b.textContent='Location is not supported in this browser';return;}
+ b.textContent='Locating…';
+ navigator.geolocation.getCurrentPosition(pos=>{
+   userPos={lat:pos.coords.latitude,lng:pos.coords.longitude};
+   b.textContent='✓ Live location active — places sorted by distance';
+   b.classList.add('good');
+   L.circleMarker([userPos.lat,userPos.lng],{radius:9,color:'#fff',weight:3,fillColor:'#5ee6aa',fillOpacity:1}).addTo(map).bindPopup('Your live location').openPopup();
+   renderCards();
+ },err=>{
+   b.textContent='Location blocked — enable browser location and try again';
+ });
+};
+renderAll();
+</script>
+</body>
+</html>
